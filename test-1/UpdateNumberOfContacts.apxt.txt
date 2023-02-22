@@ -1,0 +1,19 @@
+trigger UpdateNumberOfContacts on Contact (after insert, after update, after delete) {
+    Set<Id> accountIds = new Set<Id>();
+    if (Trigger.isInsert || Trigger.isUpdate) {
+        for (Contact contact : Trigger.new) {
+            accountIds.add(contact.AccountId);
+        }
+    } else if (Trigger.isDelete) {
+        for (Contact contact : Trigger.old) {
+            accountIds.add(contact.AccountId);
+        }
+    }
+    
+    List<Account> accountsToUpdate = new List<Account>();
+    for (AggregateResult result : [SELECT AccountId, COUNT(Id) countContacts FROM Contact WHERE AccountId IN :accountIds GROUP BY AccountId]) {
+        accountsToUpdate.add(new Account(Id = (Id)result.get('AccountId'), Number_of_Contacts__c = (Integer)result.get('countContacts')));
+    }
+    
+    update accountsToUpdate;
+}
